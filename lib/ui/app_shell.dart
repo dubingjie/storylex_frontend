@@ -10,6 +10,7 @@ import 'library_screen.dart';
 import 'reading_screen.dart';
 import 'learn_screen.dart';
 import 'review_screen.dart';
+import 'favorites_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.controller});
@@ -221,6 +222,8 @@ class _AppShellState extends State<AppShell> {
             ),
         ],
       );
+    } else if (_page == '我的收藏') {
+      body = FavoritesScreen(controller: controller);
     } else if (_page == '个人中心') {
       body = _profile();
     } else {
