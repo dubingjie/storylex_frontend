@@ -1,0 +1,41 @@
+name: storylex
+description: StoryLex 语境单词学习
+publish_to: none
+version: 1.0.0+1
+environment:
+  sdk: ^3.13.5
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  html: ^0.15.6
+  http: ^1.6.0
+  web: ^1.1.1
+  flutter_secure_storage: ^10.0.0
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/journal-elephant.png
+  fonts:
+    - family: JournalSans
+      fonts:
+        - asset: assets/fonts/journal-sans-400.ttf
+          weight: 400
+        - asset: assets/fonts/journal-sans-600.ttf
+          weight: 600
+    - family: JournalSansFull
+      fonts:
+        - asset: assets/fonts/NotoSansSC.ttf
+    - family: JournalHand
+      fonts:
+        - asset: assets/fonts/journal-hand-400.ttf
+    - family: JournalHandFull
+      fonts:
+        - asset: assets/fonts/JournalHand.ttf
+    - family: JournalPhonetic
+      fonts:
+        - asset: assets/fonts/journal-phonetic.ttf
