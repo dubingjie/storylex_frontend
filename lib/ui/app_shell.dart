@@ -211,11 +211,11 @@ class _AppShellState extends State<AppShell> {
           onBack: () => _open('复习'),
         ),
       );
-    } else if (_page == '文章库') {
+    } else if (['文章库', 'AI 写故事', 'TXT 导入'].contains(_page)) {
       body = Stack(
         children: [
           Offstage(
-            offstage: _storyId != null,
+            offstage: _page != '文章库' || _storyId != null,
             child: LibraryScreen(
               key: const ValueKey('library'),
               controller: controller,
@@ -225,7 +225,7 @@ class _AppShellState extends State<AppShell> {
               openTxtImport: _openTxtImport,
             ),
           ),
-          if (_storyId != null)
+          if (_page == '文章库' && _storyId != null)
             ReadingScreen(
               key: _readerKey,
               controller: controller,
@@ -234,31 +234,31 @@ class _AppShellState extends State<AppShell> {
               onBack: () => _leaveReader(),
               backLabel: '返回$_readerReturn',
             ),
+          if (_page == 'AI 写故事')
+            StoryDraftScreen(
+              controller: controller,
+              onBack: () => _open('文章库'),
+              onSaved: () {
+                setState(() {
+                  _page = '文章库';
+                  _libraryRevision++;
+                });
+                controller.refreshHome();
+              },
+            ),
+          if (_page == 'TXT 导入')
+            TxtImportScreen(
+              controller: controller,
+              onBack: () => _open('文章库'),
+              onSaved: () {
+                setState(() {
+                  _page = '文章库';
+                  _libraryRevision++;
+                });
+                controller.refreshHome();
+              },
+            ),
         ],
-      );
-    } else if (_page == 'AI 写故事') {
-      body = StoryDraftScreen(
-        controller: controller,
-        onBack: () => _open('文章库'),
-        onSaved: () {
-          setState(() {
-            _page = '文章库';
-            _libraryRevision++;
-          });
-          controller.refreshHome();
-        },
-      );
-    } else if (_page == 'TXT 导入') {
-      body = TxtImportScreen(
-        controller: controller,
-        onBack: () => _open('文章库'),
-        onSaved: () {
-          setState(() {
-            _page = '文章库';
-            _libraryRevision++;
-          });
-          controller.refreshHome();
-        },
       );
     } else if (_page == '我的收藏') {
       body = FavoritesScreen(controller: controller);

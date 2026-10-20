@@ -60,15 +60,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
     super.dispose();
   }
 
-  Future<void> _load({bool clear = false}) async {
+  Future<void> _load() async {
     final generation = ++_generation;
     setState(() {
       _busy = true;
       _error = null;
-      if (clear) {
-        _mine = null;
-        _recommended = null;
-      }
     });
     try {
       final pages = await Future.wait([
@@ -88,7 +84,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       if (_minePage > pages[0].pages || _recommendedPage > pages[1].pages) {
         _minePage = math.min(_minePage, pages[0].pages);
         _recommendedPage = math.min(_recommendedPage, pages[1].pages);
-        await _load(clear: true);
+        await _load();
         return;
       }
       setState(() {
@@ -112,7 +108,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
       _keyword = text.trim();
       _minePage = 1;
       _recommendedPage = 1;
-      _load(clear: true);
+      _load();
     }
 
     if (immediately) {
@@ -242,11 +238,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ),
             ),
           ],
-          if (_busy)
-            const Padding(
-              padding: EdgeInsets.only(bottom: 22),
-              child: LinearProgressIndicator(minHeight: 3),
-            ),
           _heading('我的书库', _mine),
           const SizedBox(height: 14),
           Wrap(
@@ -276,20 +267,25 @@ class _LibraryScreenState extends State<LibraryScreen> {
                     if (_category == item.key) return;
                     setState(() => _category = item.key);
                     _minePage = 1;
-                    _load(clear: true);
+                    _load();
                   },
                 ),
             ],
           ),
           const SizedBox(height: 24),
-          if (_mine != null) ...[_cards(_mine!), _pagination(_mine!, false)],
+          if (_mine != null) ...[
+            _cards(_mine!),
+            _pagination(_mine!, false),
+          ] else if (_busy)
+            _loadingCards(),
           const SizedBox(height: 35),
           _heading('系统推荐文章', _recommended),
           const SizedBox(height: 20),
           if (_recommended != null) ...[
             _cards(_recommended!, recommended: true),
             _pagination(_recommended!, true),
-          ],
+          ] else if (_busy)
+            _loadingCards(recommended: true),
           const SizedBox(height: 25),
         ],
       ),
@@ -304,6 +300,71 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
     ],
   );
+
+  Widget _loadingCards({bool recommended = false}) => LayoutBuilder(
+    builder: (context, box) {
+      final columns = box.maxWidth > 900 && recommended
+          ? 3
+          : box.maxWidth > 700
+          ? 2
+          : 1;
+      final width = (box.maxWidth - 18 * (columns - 1)) / columns;
+      return Wrap(
+        spacing: 18,
+        runSpacing: 20,
+        children: [
+          for (var i = 0; i < columns; i++)
+            Container(
+              width: width,
+              height: 190,
+              padding: const EdgeInsets.all(17),
+              decoration: BoxDecoration(
+                color: Journal.paper,
+                border: Border.all(color: Journal.line),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: JournalLayout.of(context).mobile ? 48 : 57,
+                    height: JournalLayout.of(context).mobile ? 72 : 86,
+                    decoration: BoxDecoration(
+                      color: Journal.sage,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _loadingLine(width: 74, height: 10),
+                        const SizedBox(height: 16),
+                        _loadingLine(width: width * .58, height: 17),
+                        const Spacer(),
+                        _loadingLine(width: 100, height: 13),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
+    },
+  );
+
+  Widget _loadingLine({required double width, required double height}) =>
+      Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Journal.sage,
+          borderRadius: BorderRadius.circular(8),
+        ),
+      );
+
   Widget _cards(StoryPage page, {bool recommended = false}) {
     if (page.stories.isEmpty)
       return Paper(

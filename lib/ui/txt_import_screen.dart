@@ -201,10 +201,13 @@ class _TxtImportScreenState extends State<TxtImportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextButton.icon(
-              onPressed: _busy ? null : widget.onBack,
-              icon: const Icon(Icons.arrow_back, size: 17),
-              label: const Text('返回文章库'),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _busy ? null : widget.onBack,
+                icon: const Icon(Icons.arrow_back, size: 17),
+                label: const Text('返回文章库'),
+              ),
             ),
             const SizedBox(height: 8),
             Text('导入 TXT 文章', style: Journal.hand(32)),

@@ -216,10 +216,13 @@ class _StoryDraftScreenState extends State<StoryDraftScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            TextButton.icon(
-              onPressed: _busy ? null : widget.onBack,
-              icon: const Icon(Icons.arrow_back, size: 17),
-              label: const Text('返回文章库'),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _busy ? null : widget.onBack,
+                icon: const Icon(Icons.arrow_back, size: 17),
+                label: const Text('返回文章库'),
+              ),
             ),
             const SizedBox(height: 8),
             Text('AI 写一篇故事', style: Journal.hand(32)),
