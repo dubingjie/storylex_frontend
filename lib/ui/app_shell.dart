@@ -11,6 +11,8 @@ import 'reading_screen.dart';
 import 'learn_screen.dart';
 import 'review_screen.dart';
 import 'favorites_screen.dart';
+import 'story_draft_screen.dart';
+import 'txt_import_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key, required this.controller});
@@ -77,6 +79,16 @@ class _AppShellState extends State<AppShell> {
     _resumeReader = fromHome;
     _storyId = id;
     _page = '文章库';
+    _books = false;
+  });
+
+  void _openAiDraft() => setState(() {
+    _page = 'AI 写故事';
+    _books = false;
+  });
+
+  void _openTxtImport() => setState(() {
+    _page = 'TXT 导入';
     _books = false;
   });
   Future<void> _leaveReader({String? destination}) async {
@@ -209,6 +221,8 @@ class _AppShellState extends State<AppShell> {
               controller: controller,
               revision: _libraryRevision,
               openStory: (id) => _openStory(id),
+              openAiDraft: _openAiDraft,
+              openTxtImport: _openTxtImport,
             ),
           ),
           if (_storyId != null)
@@ -221,6 +235,30 @@ class _AppShellState extends State<AppShell> {
               backLabel: '返回$_readerReturn',
             ),
         ],
+      );
+    } else if (_page == 'AI 写故事') {
+      body = StoryDraftScreen(
+        controller: controller,
+        onBack: () => _open('文章库'),
+        onSaved: () {
+          setState(() {
+            _page = '文章库';
+            _libraryRevision++;
+          });
+          controller.refreshHome();
+        },
+      );
+    } else if (_page == 'TXT 导入') {
+      body = TxtImportScreen(
+        controller: controller,
+        onBack: () => _open('文章库'),
+        onSaved: () {
+          setState(() {
+            _page = '文章库';
+            _libraryRevision++;
+          });
+          controller.refreshHome();
+        },
       );
     } else if (_page == '我的收藏') {
       body = FavoritesScreen(controller: controller);

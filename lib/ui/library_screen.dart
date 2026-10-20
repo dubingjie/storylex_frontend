@@ -15,10 +15,14 @@ class LibraryScreen extends StatefulWidget {
     super.key,
     required this.controller,
     required this.openStory,
+    required this.openAiDraft,
+    required this.openTxtImport,
     this.revision = 0,
   });
   final AppController controller;
   final ValueChanged<int> openStory;
+  final VoidCallback openAiDraft;
+  final VoidCallback openTxtImport;
   final int revision;
   @override
   State<LibraryScreen> createState() => _LibraryScreenState();
@@ -153,6 +157,23 @@ class _LibraryScreenState extends State<LibraryScreen> {
           const Text(
             '喜欢的故事，留在这里慢慢读。',
             style: TextStyle(fontSize: 12, color: Journal.muted),
+          ),
+          const SizedBox(height: 15),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                onPressed: widget.openAiDraft,
+                icon: const Icon(Icons.auto_awesome_outlined, size: 18),
+                label: const Text('AI 写故事'),
+              ),
+              OutlinedButton.icon(
+                onPressed: widget.openTxtImport,
+                icon: const Icon(Icons.upload_file_outlined, size: 18),
+                label: const Text('导入 TXT'),
+              ),
+            ],
           ),
           const SizedBox(height: 27),
           Row(

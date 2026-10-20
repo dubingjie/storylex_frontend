@@ -43,6 +43,41 @@ class StoryPage {
   int get pages => max(1, (total / size).ceil());
 }
 
+class StoryDraft {
+  StoryDraft.fromJson(Json json)
+    : id = json['draft_id'] as String,
+      status = json['status'] as String? ?? 'failed',
+      version = number(json['version'] ?? 0),
+      targetBookId = json['target_book_id'] as String? ?? '',
+      storyType = json['story_type'] as String? ?? '',
+      title = json['title'] as String? ?? '',
+      content = json['processed_content'] as String? ?? '',
+      sourceType = json['source_type'] as String? ?? 'ai_generated',
+      sourceContent = json['source_content'] as String? ?? '',
+      originalContent = json['original_content'] as String? ?? '',
+      error = json['error'] as String? ?? '',
+      errorCode = json['error_code'] as String? ?? '',
+      targetWords = (json['target_words'] as List? ?? const [])
+          .map((word) => object(word))
+          .toList(),
+      wordIds = (json['word_ids'] as List? ?? const []).map(number).toList(),
+      embeddedOccurrences = number(json['embedded_occurrences'] ?? 0),
+      importInfo = json['import_info'] is Map
+          ? object(json['import_info'])
+          : <String, dynamic>{},
+      missingWordIds = (json['missing_word_ids'] as List? ?? const [])
+          .map(number)
+          .toList();
+  final String id, status, targetBookId, storyType, title, content;
+  final String sourceType, sourceContent, originalContent;
+  final String error, errorCode;
+  final int version;
+  final List<Json> targetWords;
+  final List<int> wordIds, missingWordIds;
+  final int embeddedOccurrences;
+  final Json importInfo;
+}
+
 class StoryWord {
   StoryWord.fromJson(Json j)
     : id = number(j['word_id']),

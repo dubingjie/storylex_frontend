@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -33,6 +34,7 @@ class ApiClient {
     String path, {
     Json? body,
     bool auth = true,
+    Duration? requestTimeout,
   }) async {
     final sentToken = auth ? token : null;
     try {
@@ -48,36 +50,8 @@ class ApiClient {
       }
       final response = await (() async => http.Response.fromStream(
         await _client.send(request),
-      ))().timeout(timeout);
-      if (response.statusCode == 401) {
-        if (auth && sentToken != null && token == sentToken) {
-          onUnauthorized?.call();
-        }
-        throw const ApiException('登录已过期，请重新登录。', code: 401);
-      }
-      Json envelope;
-      try {
-        envelope = object(jsonDecode(utf8.decode(response.bodyBytes)));
-      } catch (_) {
-        throw const ApiException('服务响应异常，请稍后重试。');
-      }
-      final code = envelope['code'];
-      if (code != 200 ||
-          response.statusCode < 200 ||
-          response.statusCode >= 300) {
-        if (code == 401 && auth && sentToken != null && token == sentToken) {
-          onUnauthorized?.call();
-        }
-        // Do not render raw SQL errors, stack traces or HTML to the user.
-        final message = code is num && code >= 500
-            ? '服务暂时不可用，请稍后重试。'
-            : envelope['msg'] as String? ?? '请求未成功，请重试。';
-        throw ApiException(
-          message,
-          code: code is int ? code : response.statusCode,
-        );
-      }
-      return object(envelope['data'] ?? <String, dynamic>{});
+      ))().timeout(requestTimeout ?? timeout);
+      return _decodeResponse(response, auth: auth, sentToken: sentToken);
     } on ApiException {
       rethrow;
     } on TimeoutException {
@@ -87,6 +61,75 @@ class ApiClient {
     } catch (_) {
       throw const ApiException('暂时无法完成请求，请稍后重试。');
     }
+  }
+
+  Future<Json> uploadFile(
+    String path, {
+    required Uint8List bytes,
+    required String filename,
+    required Json fields,
+    bool auth = true,
+  }) async {
+    final sentToken = auth ? token : null;
+    try {
+      final uri = Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}$path');
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['Accept'] = 'application/json'
+        ..fields.addAll(fields.map((key, value) => MapEntry(key, '$value')))
+        ..files.add(
+          http.MultipartFile.fromBytes('file', bytes, filename: filename),
+        );
+      if (sentToken != null) {
+        request.headers['Authorization'] = 'Bearer $sentToken';
+      }
+      final response = await (() async => http.Response.fromStream(
+        await _client.send(request),
+      ))().timeout(timeout);
+      return _decodeResponse(response, auth: auth, sentToken: sentToken);
+    } on ApiException {
+      rethrow;
+    } on TimeoutException {
+      throw const ApiException('上传超时，请检查网络后重试。');
+    } on http.ClientException {
+      throw const ApiException('无法连接服务，请检查网络和后端服务是否已启动。');
+    } catch (_) {
+      throw const ApiException('暂时无法完成上传，请稍后重试。');
+    }
+  }
+
+  Json _decodeResponse(
+    http.Response response, {
+    required bool auth,
+    required String? sentToken,
+  }) {
+    if (response.statusCode == 401) {
+      if (auth && sentToken != null && token == sentToken) {
+        onUnauthorized?.call();
+      }
+      throw const ApiException('登录已过期，请重新登录。', code: 401);
+    }
+    Json envelope;
+    try {
+      envelope = object(jsonDecode(utf8.decode(response.bodyBytes)));
+    } catch (_) {
+      throw const ApiException('服务响应异常，请稍后重试。');
+    }
+    final code = envelope['code'];
+    if (code != 200 ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300) {
+      if (code == 401 && auth && sentToken != null && token == sentToken) {
+        onUnauthorized?.call();
+      }
+      final message = code is num && code >= 500
+          ? '服务暂时不可用，请稍后重试。'
+          : envelope['msg'] as String? ?? '请求未成功，请重试。';
+      throw ApiException(
+        message,
+        code: code is int ? code : response.statusCode,
+      );
+    }
+    return object(envelope['data'] ?? <String, dynamic>{});
   }
 
   void close() => _client.close();
