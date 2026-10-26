@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'state/app_controller.dart';
@@ -16,11 +18,28 @@ class StoryLexApp extends StatefulWidget {
 class _StoryLexAppState extends State<StoryLexApp> {
   final _navigator = GlobalKey<NavigatorState>();
   String? _lastToken;
+  bool _bootSlow = false;
+  Timer? _bootTimer;
+
   @override
   void initState() {
     super.initState();
     _lastToken = widget.controller.session?.token;
     widget.controller.addListener(_changed);
+    _trackBooting();
+  }
+
+  // 启动恢复会话超过 6 秒时提示后端可能在唤醒，避免用户以为卡死。
+  void _trackBooting() {
+    if (widget.controller.booting) {
+      _bootTimer ??= Timer(const Duration(seconds: 6), () {
+        if (mounted) setState(() => _bootSlow = true);
+      });
+    } else {
+      _bootTimer?.cancel();
+      _bootTimer = null;
+      if (_bootSlow) _bootSlow = false;
+    }
   }
 
   @override
@@ -34,6 +53,7 @@ class _StoryLexAppState extends State<StoryLexApp> {
   }
 
   void _changed() {
+    _trackBooting();
     final token = widget.controller.session?.token;
     if (token != _lastToken) {
       _lastToken = token;
@@ -50,6 +70,7 @@ class _StoryLexAppState extends State<StoryLexApp> {
   @override
   void dispose() {
     widget.controller.removeListener(_changed);
+    _bootTimer?.cancel();
     super.dispose();
   }
 
@@ -58,14 +79,21 @@ class _StoryLexAppState extends State<StoryLexApp> {
     final controller = widget.controller;
     final Widget home;
     if (controller.booting) {
-      home = const Scaffold(
+      home = Scaffold(
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(strokeWidth: 2),
-              SizedBox(height: 18),
-              Text('正在打开你的手帐…'),
+              const CircularProgressIndicator(strokeWidth: 2),
+              const SizedBox(height: 18),
+              const Text('正在打开你的手帐…'),
+              if (_bootSlow) ...[
+                const SizedBox(height: 10),
+                const Text(
+                  '服务正在唤醒，可能需要半分钟左右，请稍候…',
+                  style: TextStyle(color: Journal.muted, fontSize: 12),
+                ),
+              ],
             ],
           ),
         ),

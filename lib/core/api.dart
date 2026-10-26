@@ -21,7 +21,8 @@ class ApiClient {
       'API_BASE_URL',
       defaultValue: 'http://192.168.30.97:5000',
     ),
-    this.timeout = const Duration(seconds: 20),
+    // 免费后端冷启动常需 30~60 秒，超时须覆盖唤醒时间，否则首次请求必失败。
+    this.timeout = const Duration(seconds: 90),
   }) : _client = client ?? http.Client();
   final http.Client _client;
   final String baseUrl;
@@ -30,6 +31,39 @@ class ApiClient {
   void Function()? onUnauthorized;
 
   Future<Json> request(
+    String method,
+    String path, {
+    Json? body,
+    bool auth = true,
+    Duration? requestTimeout,
+    bool retryOnTimeout = false,
+  }) async {
+    // GET 与显式允许的请求（如登录）在超时后自动重试一次，
+    // 以便后端冷启动超过单次超时时仍有机会成功；
+    // 答题等写请求不重试，避免服务端已处理却因响应丢失而重复提交。
+    final canRetry = method == 'GET' || retryOnTimeout;
+    var attempt = 0;
+    while (true) {
+      attempt++;
+      try {
+        return await _requestOnce(
+          method,
+          path,
+          body: body,
+          auth: auth,
+          requestTimeout: requestTimeout,
+        );
+      } on TimeoutException {
+        if (canRetry && attempt < 2) {
+          await Future<void>.delayed(const Duration(seconds: 2));
+          continue;
+        }
+        throw const ApiException('连接超时，请检查网络后重试。');
+      }
+    }
+  }
+
+  Future<Json> _requestOnce(
     String method,
     String path, {
     Json? body,
@@ -55,7 +89,7 @@ class ApiClient {
     } on ApiException {
       rethrow;
     } on TimeoutException {
-      throw const ApiException('连接超时，请检查网络后重试。');
+      rethrow;
     } on http.ClientException {
       throw const ApiException('无法连接服务，请检查网络和后端服务是否已启动。');
     } catch (_) {
@@ -147,6 +181,8 @@ class StoryLexRepository {
       'POST',
       '/api/auth/${register ? 'register' : 'login'}',
       auth: false,
+      // 登录可安全重试（冷启动兜底）；注册不重试，避免重复提交后误报已存在。
+      retryOnTimeout: !register,
       body: {'username': username.trim(), 'password': password},
     );
     return Session(

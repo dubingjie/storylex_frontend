@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../state/app_controller.dart';
@@ -16,8 +18,33 @@ class _AuthScreenState extends State<AuthScreen> {
       _password = TextEditingController(),
       _confirm = TextEditingController();
   bool _register = false, _showPassword = false;
+  bool _slow = false;
+  Timer? _slowTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_busyChanged);
+  }
+
+  // 请求超过 6 秒还没回来，多半是后端在冷启动唤醒，给用户一句说明，
+  // 免得对着转圈以为卡死。
+  void _busyChanged() {
+    if (widget.controller.busy) {
+      _slowTimer ??= Timer(const Duration(seconds: 6), () {
+        if (mounted) setState(() => _slow = true);
+      });
+    } else {
+      _slowTimer?.cancel();
+      _slowTimer = null;
+      if (_slow && mounted) setState(() => _slow = false);
+    }
+  }
+
   @override
   void dispose() {
+    widget.controller.removeListener(_busyChanged);
+    _slowTimer?.cancel();
     _name.dispose();
     _password.dispose();
     _confirm.dispose();
@@ -215,6 +242,17 @@ class _AuthScreenState extends State<AuthScreen> {
                               _submit();
                             },
                           ),
+                          if (controller.busy && _slow) ...[
+                            const SizedBox(height: 14),
+                            const Text(
+                              '服务正在唤醒，可能需要半分钟左右，请稍候…',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Journal.muted,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 18),
                           Text(
                             _register ? '注册后，选一本想学的词书。' : '欢迎回来，今天也慢慢积累。',
